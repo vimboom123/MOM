@@ -157,9 +157,25 @@ function val = noyau_p15(zp, zm, a, k)
 
     G = exp(-1j*k*R) ./ (4*pi*R);
 
-    d2G_dz2 = G .* ( (-k^2*h.^2 ./ R.^2) ...
-                   + (1j*k*(2*h.^2 - a^2) ./ R.^3) ...
-                   + ( (2*h.^2 - a^2) ./ R.^4 ) );
+    % D'abord, nous construisons le contenu des accolades { ... }
+    
+    % Premier terme principal : -R^2 * (1 + jkR)
+    term1 = -R.^2 .* (1 + 1j*k*R);
+    
+    % Première partie à l'intérieur des crochets [...] : jkR(z-z')^2
+    inner_term_A = 1j*k*R .* h.^2;
+    
+    % Seconde partie à l'intérieur des crochets [...] : (1+jkR)(3+jkR)(z-z')^2
+    inner_term_B = (1 + 1j*k*R) .* (3 + 1j*k*R) .* h.^2;
+    
+    % On combine pour former le contenu des crochets [...] = A - B
+    inner_bracket = inner_term_A - inner_term_B;
+    
+    % On combine pour former le contenu des accolades {...} = term1 - [...]
+    curly_braces_content = term1 - inner_bracket;
+    
+    % On calcule d2G/dz2 en multipliant par le facteur pré-accolades
+    d2G_dz2 = (exp(-1j*k*R) ./ (4*pi*R.^5)) .* curly_braces_content;
 
     val = k^2 * G + d2G_dz2;
 end
