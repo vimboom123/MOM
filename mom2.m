@@ -1,7 +1,4 @@
-% =========================================================================
-%         ANALYSE D'UNE ANTENNE DIPÔLE PAR LA MÉTHODE DES MOMENTS
-% Utilisation de fonctions de base sinusoïdales et de fonctions test
-% =========================================================================
+
 
 %% --- 1. Définir les paramètres de l'antenne et de la simulation ---
 clear; close all; clc;
@@ -24,7 +21,7 @@ Vs = 1;                        % Tension d'alimentation (V), définie à 1V
 %% --- 2. Préparation de la boucle et du stockage des résultats ---
 
 % Définir les valeurs de N (nombre de segments) à simuler
-valeurs_N = [7, 17, 27];
+valeurs_N = [8, 18, 28];
 
 % Initialiser des tableaux de cellules pour stocker les résultats de chaque simulation
 % C'est ici que nous conservons les résultats demandés
@@ -54,7 +51,7 @@ for i = 1:length(valeurs_N)
     Green = @(R) exp(-1j * k * R) ./ (4 * pi * R);
 
     fprintf('Calcul de la matrice d''impédance Z (N=%d)...\n', N);
-    tic; % Démarrer le chronomètre
+
     for m = 1:(N-1)
         zm_centre = z_nodes(m+1);
         z_debut = zm_centre - delta/2;
@@ -69,7 +66,7 @@ for i = 1:length(valeurs_N)
                               Green(sqrt(a^2 + (z - zn_moins_1).^2)) - ...
                               2 * cos(k*delta) * Green(sqrt(a^2 + (z - zn_centre).^2));
             
-            valeur_integrale = integral(integrande, z_debut, z_fin, 'ArrayValued', true);
+            valeur_integrale = integral(integrande, z_debut, z_fin);
             Z(m, n) = valeur_integrale;
         end
     end
@@ -81,7 +78,7 @@ for i = 1:length(valeurs_N)
     % --- 3.3. Calcul du vecteur d'excitation [V] ---
     V = zeros(N-1, 1);
     % Pour un N impair, le point d'alimentation central est à l'indice (N+1)/2
-    indice_central = (N+1)/2;
+    indice_central = (N)/2;
     V(indice_central) = Vs;
 
     % --- 3.4. Résolution pour la distribution de courant [I] ---
