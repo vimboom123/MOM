@@ -1,19 +1,9 @@
-%% CM5 - MoM dipôle à fil mince - Version syntaxe de base claire
-%
-% Idée de programmation :
-% Utiliser des boucles for doubles les plus basiques et intuitives pour calculer
-% chaque élément de la matrice d'impédance Z individuellement.
-% Cette méthode évite les fonctions comme arrayfun qui peuvent sembler complexes ou "IA".
-% Chaque étape du code est claire et nette, mettant l'accent sur le processus physique
-% de l'algorithme et la logique de calcul.
-%==========================================================================
-
 clear;
 close all;
 clc;
 
 %% 1. Définition des constantes et paramètres du problème
-%--------------------------------------------------------------------------
+
 f = 300e6;                      % Fréquence de travail (Hz)
 c = 3e8;                        % Vitesse de la lumière (m/s)
 lambda = c/f;                   % Longueur d'onde (m)
@@ -38,11 +28,11 @@ fprintf('  - Rayon du fil a = %.6f m (%.4f * lambda)\n', a, a/lambda);
 fprintf('====================================================\n\n');
 
 %% 2. Préparer un conteneur pour stocker les résultats de chaque calcul
-%--------------------------------------------------------------------------
+
 tous_les_resultats = cell(length(N_list), 1);
 
 %% 3. Boucle principale, calcul de différents nombres de segments N
-%--------------------------------------------------------------------------
+
 for idx = 1:length(N_list)
     N = N_list(idx);
     Delta = l/N; % Calculer la longueur de chaque segment
@@ -62,7 +52,7 @@ for idx = 1:length(N_list)
 
     % Étape C : Construction de la matrice d'impédance Z (utilisant une double boucle for)
     fprintf('  - Construction de la matrice d''impédance Z de taille %d x %d ...\n', N, N);
-    Z = zeros(N, N); % Créer d'abord une matrice de zéros
+    Z = zeros(N, N); % Création d'une matrice de zéros
 
     for m = 1:N  % m contrôle la ligne, représentant le point d'observation (point de champ)
         zm = zc(m); % Coordonnée du point d'observation actuel
@@ -72,10 +62,10 @@ for idx = 1:length(N_list)
             zn1 = z_bords(n+1);   % Point de fin du n-ième segment
 
             % Définir la fonction intégrande, zp est la variable d'intégration
-            integrande = @(zp) noyau_p15(zp, zm, a, k);
+            integrande = @(zp) derivee(zp, zm, a, k);
 
             % Utiliser la fonction d'intégration intégrée de MATLAB pour l'intégration numérique
-            valeur_integrale = integral(integrande, zn0, zn1, 'RelTol',1e-8, 'AbsTol',1e-11);
+            valeur_integrale = integral(integrande, zn0, zn1);
 
             % Calculer l'élément Z(m,n) de la matrice Z
             Z(m,n) = (1j / (omega * eps0)) * valeur_integrale;
@@ -85,7 +75,7 @@ for idx = 1:length(N_list)
 
     % Étape D : Construction du vecteur de tension d'excitation V
     V = zeros(N, 1);
-    V(segment_alimentation) = Va / Delta; % Utiliser le modèle Delta-gap
+    V(segment_alimentation) = Va / Delta;
 
     % Étape E : Résolution du système d'équations linéaires Z * I = V, obtenir la distribution de courant I
     fprintf('  - Résolution du système d''équations linéaires Z*I=V ...\n');
@@ -147,7 +137,7 @@ fprintf('Observation : À mesure que le nombre de segments N augmente, le résul
 
 %% Annexe : Définition de la fonction noyau du problème
 %--------------------------------------------------------------------------
-function val = noyau_p15(zp, zm, a, k)
+function val = derivee(zp, zm, a, k)
     % zp : point source
     % zm : point de champ/point d'observation
     % a  : rayon du fil
