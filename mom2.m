@@ -20,8 +20,12 @@ Vs = 1;                        % Tension d'alimentation (V), définie à 1V
 
 %% --- 2. Préparation de la boucle et du stockage des résultats ---
 
+% ⚠️ 重要：N = 段（Segment）的数量
+% N 表示将天线划分成的物理段（segment）的数量
+% 例如：N=7 表示将天线分成 7 个物理段
+
 % Définir les valeurs de N (nombre de segments) à simuler
-valeurs_N = [7, 17, 27];
+valeurs_N = [7, 17, 27];  % 7段, 17段, 27段
 
 % Initialiser des tableaux de cellules pour stocker les résultats de chaque simulation
 % C'est ici que nous conservons les résultats demandés
@@ -43,25 +47,43 @@ for i = 1:length(valeurs_N)
     fprintf('\n--- Calcul en cours pour N = %d ---\n', N);
 
     % --- 3.1. Création du maillage de l'antenne pour N ---
+    % IMPORTANT: Index System for PWS
+    % - N segments (物理段数)
+    % - N+1 nodes (节点数): z_nodes(1) 到 z_nodes(N+1)
+    % - N-1 basis functions (基函数数): 因为节点1和节点N+1的电流=0（边界条件）
+    % - 节点索引 n 对应基函数索引 n-1 (节点2→基函数1, 节点3→基函数2, ...)
     delta = l / N;
-    z_nodes = linspace(-l/2, l/2, N+1);
+    z_nodes = linspace(-l/2, l/2, N+1);  % N+1 个节点，索引 1 到 N+1
 
     % --- 3.2. Calcul de la matrice d'impédance [Z] ---
+    % Z 是 (N-1) × (N-1) 矩阵，因为只有 N-1 个基函数
     Z = zeros(N-1, N-1);
     % Définition de la fonction de Green G(R) = exp(-jkR) / (4*pi*R)
     Green = @(R) exp(-1j * k * R) ./ (4 * pi * R);
 
     fprintf('Calcul de la matrice d''impédance Z (N=%d)...\n', N);
 
-    for m = 1:(N-1)
-        zm_centre = z_nodes(m+1);
+    % ⚠️ 关于 m 和 n 的说明（重要！）
+    % m: 测试函数索引 = 矩阵行索引 (1 到 N-1)
+    %    - 测试函数数量 = N-1（因为节点1和N+1没有测试函数）
+    %    - 测试函数 m 对应节点 m+1（因为节点1没有测试函数）
+    % n: 基函数索引 = 矩阵列索引 (1 到 N-1)
+    %    - 基函数数量 = N-1（因为节点1和N+1的电流=0，边界条件）
+    %    - 基函数 n 对应节点 n+1（因为节点1没有基函数）
+    % 
+    % 注意：节点数 = N+1，但 m 和 n 的范围是 1 到 N-1（基函数索引）
+    
+    for m = 1:(N-1)  % m: 行索引，测试函数索引（1 到 N-1）
+        % 测试函数 m 对应节点 m+1（因为节点1没有测试函数）
+        zm_centre = z_nodes(m+1);  % 节点索引 = m+1
         z_debut = zm_centre - delta/2;
         z_fin = zm_centre + delta/2;
         
-        for n = 1:(N-1)
-            zn_centre = z_nodes(n+1);
-            zn_moins_1 = z_nodes(n);
-            zn_plus_1 = z_nodes(n+2);
+        for n = 1:(N-1)  % n: 列索引，基函数索引（1 到 N-1）
+            % 基函数 n 跨越节点 n, n+1, n+2
+            zn_centre = z_nodes(n+1);    % 节点索引 = n+1（基函数峰值点）
+            zn_moins_1 = z_nodes(n);     % 节点索引 = n（左端点）
+            zn_plus_1 = z_nodes(n+2);    % 节点索引 = n+2（右端点）
             
             integrande = @(z) Green(sqrt(a^2 + (z - zn_plus_1).^2)) + ...
                               Green(sqrt(a^2 + (z - zn_moins_1).^2)) - ...
@@ -77,21 +99,33 @@ for i = 1:length(valeurs_N)
     Z_final = facteur_const * Z;
 
     % --- 3.3. Calcul du vecteur d'excitation [V] ---
+    % V 是 (N-1) × 1 向量，对应 N-1 个基函数
     V = zeros(N-1, 1);
-    % Pour un N impair, le point d'alimentation central est à l'indice (N+1)/2
-    indice_central = (N)/2;
-    V(indice_central) = Vs;
+    
+    % 索引转换说明（以 N=7 为例）：
+    % - 节点索引：1, 2, 3, 4, 5, 6, 7, 8（共 8 个节点）
+    % - 基函数索引：1, 2, 3, 4, 5, 6（共 6 个基函数）
+    % - 中心节点 = (7+1)/2 = 4（节点索引）
+    % - 对应基函数 = 4-1 = 3（基函数索引）
+    % - 因此：V(3) = Vs（使用基函数索引）
+    
+    noeud_central = (N+1)/2;        % 中心节点索引 (1 到 N+1)
+    indice_base = noeud_central - 1; % 转换为基函数索引 (1 到 N-1)
+    V(indice_base) = Vs;             % 在对应的基函数上施加激励
 
     % --- 3.4. Résolution pour la distribution de courant [I] ---
     fprintf('Résolution du système linéaire...\n');
-    I_coeffs = Z_final \ V;
-    I = [0; I_coeffs; 0]; % Ajouter les zéros aux extrémités (conditions aux limites)
+    I_coeffs = Z_final \ V;  % I_coeffs 是 (N-1) × 1，基函数系数
+    
+    % 将基函数系数转换为节点电流
+    % I_coeffs(1..N-1) 对应节点 2..N 的电流
+    % 节点 1 和节点 N+1 的电流 = 0（边界条件）
+    I = [0; I_coeffs; 0];  % I 是 (N+1) × 1，节点电流（索引 1 到 N+1）
     
     % --- 3.5. Calcul de l'impédance d'entrée Zin ---
-    % Pour PWS, le courant est défini aux nœuds
-    % indice_central correspond au nœud central où se trouve l'alimentation
-    I_centre = I(indice_central); % Courant au nœud central
-    Zin = Vs / I_centre; % Impédance d'entrée
+    % I 是节点电流向量，使用节点索引访问
+    I_centre = I(noeud_central);  % 使用节点索引（不是基函数索引！）
+    Zin = Vs / I_centre;          % Impédance d'entrée
     fprintf('  - Impédance d''entrée Zin = %.2f %+.2fj Ohm\n', real(Zin), imag(Zin));
     
     % --- 3.6. STOCKAGE DES RÉSULTATS ---
