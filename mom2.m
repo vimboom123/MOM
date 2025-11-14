@@ -21,7 +21,7 @@ Vs = 1;                        % Tension d'alimentation (V), définie à 1V
 %% --- 2. Préparation de la boucle et du stockage des résultats ---
 
 % Définir les valeurs de N (nombre de segments) à simuler
-valeurs_N = [8, 18, 28];
+valeurs_N = [7, 17, 27];
 
 % Initialiser des tableaux de cellules pour stocker les résultats de chaque simulation
 % C'est ici que nous conservons les résultats demandés
