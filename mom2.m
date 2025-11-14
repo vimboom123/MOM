@@ -28,6 +28,7 @@ valeurs_N = [8, 18, 28];
 Z_matrices = cell(1, length(valeurs_N));
 I_vecteurs = cell(1, length(valeurs_N));
 z_nodes_stockes = cell(1, length(valeurs_N));
+Zin_resultats = cell(1, length(valeurs_N));
 
 % Créer une nouvelle figure pour tracer tous les résultats
 figure('Name', 'Analyse de convergence de la distribution de courant');
@@ -86,12 +87,20 @@ for i = 1:length(valeurs_N)
     I_coeffs = Z_final \ V;
     I = [0; I_coeffs; 0]; % Ajouter les zéros aux extrémités (conditions aux limites)
     
-    % --- 3.5. STOCKAGE DES RÉSULTATS ---
+    % --- 3.5. Calcul de l'impédance d'entrée Zin ---
+    % Pour PWS, le courant est défini aux nœuds
+    % indice_central correspond au nœud central où se trouve l'alimentation
+    I_centre = I(indice_central); % Courant au nœud central
+    Zin = Vs / I_centre; % Impédance d'entrée
+    fprintf('  - Impédance d''entrée Zin = %.2f %+.2fj Ohm\n', real(Zin), imag(Zin));
+    
+    % --- 3.6. STOCKAGE DES RÉSULTATS ---
     Z_matrices{i} = Z_final;
     I_vecteurs{i} = I;
     z_nodes_stockes{i} = z_nodes;
+    Zin_resultats{i} = Zin; % Stocker Zin pour comparaison
     
-    % --- 3.6. Tracé des résultats pour la valeur actuelle de N ---
+    % --- 3.7. Tracé des résultats pour la valeur actuelle de N ---
     % Décalage de l'axe des x pour correspondre au PDF (commençant à 0)
     x_trace = z_nodes + l/2;
     
@@ -114,3 +123,17 @@ xlim([0, l]); % Définir les limites de l'axe des x de 0 à l
 legend show; % Afficher la légende
 
 fprintf('\nTous les calculs sont terminés. Le graphique a été généré !\n');
+
+%% --- 5. Résumé : Comparaison de l'impédance d'entrée pour différents N ---
+fprintf('\n====================================================\n');
+fprintf('Résumé : Comparaison de l''impédance d''entrée Zin\n');
+fprintf('====================================================\n');
+fprintf(' N \t\t Impédance d''entrée Zin (Ohm) \n');
+fprintf('----------------------------------------------------\n');
+for i = 1:length(valeurs_N)
+    N = valeurs_N(i);
+    Zin = Zin_resultats{i};
+    fprintf(' %-d\t\t %.2f %+.2fj\n', N, real(Zin), imag(Zin));
+end
+fprintf('====================================================\n');
+fprintf('Observation : À mesure que le nombre de segments N augmente, l''impédance d''entrée tend à converger.\n');
