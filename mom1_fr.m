@@ -15,8 +15,10 @@ l = 0.47*lambda;                % Longueur totale du dipôle (m)
 a = 0.005*lambda;               % Rayon du fil (m)
 Va = 1;                         % Tension d'alimentation (V)
 
+
+
 % Définir différents nombres de segments pour comparaison
-N_list = [7, 17, 27];
+N_list = [7, 17, 27];  % 7段, 17段, 27段
 colors = {'r', 'b', [1 0.5 0]}; % Couleurs pour le tracé
 
 fprintf('====================================================\n');
@@ -82,8 +84,9 @@ for idx = 1:length(N_list)
     I = Z \ V;
     fprintf('  - Distribution de courant I calculée.\n');
 
-    % Étape F : Calcul de l'impédance d'entrée
-    Zin = Va / (I(segment_alimentation) * Delta);
+   
+    Zin = Va / I(segment_alimentation);
+    
     fprintf('  - Impédance d''entrée Zin = %.2f %+.2fj Ohm\n', real(Zin), imag(Zin));
 
     % Étape G : Sauvegarder tous les résultats importants de cette itération
